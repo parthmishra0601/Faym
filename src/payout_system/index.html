@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payout Management System</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: #0f172a;
+      --panel-2: #111c31;
+      --border: #243449;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #4f8cff;
+      --accent-2: #19c37d;
+      --danger: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #07111f 0%, #111c31 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .app-shell {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .sidebar {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+      height: fit-content;
+    }
+    .sidebar h2 { font-size: 18px; margin: 0 0 16px; }
+    .sidebar .nav-item {
+      display: block; padding: 10px 12px; margin: 8px 0; color: var(--muted); text-decoration: none; border-radius: 10px;
+      background: rgba(255,255,255,0.03); border: 1px solid transparent;
+    }
+    .sidebar .nav-item.active, .sidebar .nav-item:hover { color: white; border-color: rgba(79,140,255,0.3); background: rgba(79,140,255,0.12); }
+    .container {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--border);
+      padding: 28px;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+      backdrop-filter: blur(12px);
+    }
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .hero h1 { margin: 0 0 8px; font-size: 28px; }
+    .hero p { margin: 0; color: var(--muted); max-width: 650px; }
+    .badge {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 20px; }
+    .panel {
+      background: linear-gradient(145deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--border);
+      padding: 18px;
+      border-radius: 18px;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .panel:hover {
+      transform: translateY(-2px);
+      border-color: rgba(79, 140, 255, 0.35);
+      box-shadow: 0 14px 30px rgba(0,0,0,0.24);
+    }
+    .panel h3 { margin-top: 0; margin-bottom: 14px; font-size: 18px; }
+    .panel p { color: var(--muted); font-size: 14px; margin-top: 0; }
+    .section { display: none; }
+    .terminal-panel {
+      background: #02070f; border: 1px solid var(--border); border-radius: 14px; padding: 14px;
+      font-family: Consolas, monospace; margin-top: 20px;
+    }
+    .terminal-panel .prompt { color: #80f0bf; }
+    .terminal-panel input { background: transparent; border: none; padding: 0; margin: 0; color: white; font-family: inherit; }
+    .terminal-panel input:focus { outline: none; }
+    .toolbar { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .shortcut-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .shortcut-row button { width: auto; margin-top: 0; }
+    .hero-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .status-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: rgba(25,195,125,0.14); color: #86f2bd; border: 1px solid rgba(25,195,125,0.3); font-size: 12px; font-weight: 700; }
+    .status-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #49f4a2; box-shadow: 0 0 10px #49f4a2; }
+    .clock { padding: 8px 12px; border-radius: 999px; background: rgba(79,140,255,0.12); border: 1px solid rgba(79,140,255,0.25); color: var(--text); font-size: 13px; font-weight: 700; }
+    .toast { position: fixed; top: 18px; right: 18px; z-index: 999; background: rgba(15, 23, 42, 0.95); border: 1px solid var(--border); color: white; padding: 12px 14px; border-radius: 12px; box-shadow: 0 16px 36px rgba(0,0,0,0.3); opacity: 0; transform: translateY(-8px); pointer-events: none; transition: all 0.2s ease; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toolbar input { flex: 1; min-width: 180px; }
+    .section.active { display: block; }
+    label { display: block; margin-top: 12px; font-weight: 600; color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+    input, select, button {
+      width: 100%; padding: 11px 12px; margin-top: 6px; border-radius: 10px;
+      border: 1px solid var(--border); background: #0b1220; color: var(--text);
+      font-size: 14px;
+    }
+    input:focus, select:focus { outline: 2px solid rgba(79, 140, 255, 0.25); border-color: var(--accent); }
+    button {
+      cursor: pointer; border: none; font-weight: 700; transition: transform 0.15s ease, opacity 0.15s ease;
+      margin-top: 14px;
+    }
+    button:hover { transform: translateY(-1px); opacity: 0.95; }
+    .primary { background: linear-gradient(135deg, var(--accent), #6ea8ff); color: white; }
+    .secondary { background: linear-gradient(135deg, var(--accent-2), #38f2ae); color: #03110c; }
+    .danger { background: linear-gradient(135deg, var(--danger), #ff8b8b); color: white; }
+    .output {
+      margin-top: 20px; background: linear-gradient(145deg, #02070f, #06111d);
+      color: #d4f7e8; padding: 18px; border-radius: 16px; min-height: 180px;
+      border: 1px solid var(--border); font-size: 14px; line-height: 1.6;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    .output h4 { margin-top: 0; margin-bottom: 8px; }
+    .output pre { white-space: pre-wrap; word-break: break-word; margin-top: 12px; color: #bfead4; }
+    .pill {
+      display: inline-block; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      background: rgba(25,195,125,0.15); color: #80f0bf; border: 1px solid rgba(25,195,125,0.3);
+      margin-bottom: 10px;
+    }
+    .mini-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+    .mini-card { background: rgba(79,140,255,0.08); border: 1px solid rgba(79,140,255,0.16); border-radius: 12px; padding: 10px; }
+    .mini-card strong { display: block; font-size: 18px; margin-top: 4px; }
+    .chart { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+    .chart .bar { background: rgba(255,255,255,0.06); border-radius: 12px; padding: 10px; border: 1px solid var(--border); min-height: 120px; display: flex; flex-direction: column; justify-content: flex-end; }
+    .chart .bar span { display: block; height: 0; border-radius: 8px 8px 0 0; background: linear-gradient(135deg, var(--accent), var(--accent-2)); transition: height 0.3s ease; }
+    .chart .bar strong { margin-top: 8px; font-size: 16px; }
+    .status-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+    .stat { flex: 1; min-width: 120px; background: rgba(79,140,255,0.1); border: 1px solid rgba(79,140,255,0.2); border-radius: 12px; padding: 12px; transition: transform 0.2s ease; }
+    .stat:hover { transform: translateY(-1px); }
+    .metric-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .metric-card { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+    .metric-card span { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .metric-card strong { display: block; font-size: 20px; margin-top: 6px; }
+    .action-hint { margin-top: 12px; color: var(--muted); font-size: 13px; }
+    .status-pill.success { background: rgba(25,195,125,0.14); color: #86f2bd; border-color: rgba(25,195,125,0.3); }
+    .status-pill.warning { background: rgba(255,184,77,0.12); color: #ffd187; border-color: rgba(255,184,77,0.3); }
+    button:disabled { opacity: 0.65; cursor: wait; transform: none; }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,0.8), transparent 90%);
+    }
+    .stat strong { display: block; font-size: 20px; margin-top: 6px; }
+    .table-wrap { overflow-x: auto; margin-top: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
+    th { color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; }
+    .chip { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .chip.success { background: rgba(25,195,125,0.15); color: #80f0bf; }
+    .chip.warn { background: rgba(255,107,107,0.15); color: #ffb0b0; }
+    @media (max-width: 1100px) { .app-shell { grid-template-columns: 1fr; } .sidebar { order: 2; } }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 700px) { body { padding: 12px; } .container { padding: 18px; } .hero { flex-direction: column; align-items: flex-start; } }
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast"></div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <h2>Operations</h2>
+      <a class="nav-item active" href="#">Dashboard</a>
+      <a class="nav-item" href="#">Sales</a>
+      <a class="nav-item" href="#">Payouts</a>
+      <a class="nav-item" href="#">Users</a>
+      <a class="nav-item" href="#">Settings</a>
+    </aside>
+
+    <main class="container">
+      <div class="hero">
+        <div>
+          <h1>User Payout Management System</h1>
+          <p>Manage affiliate sales, advance payouts, reconciliation, and balance visibility through a polished control-center experience.</p>
+        </div>
+        <div class="hero-controls">
+          <div class="status-pill" id="connectionStatus"><span class="dot"></span>Live sync</div>
+          <div class="clock" id="liveClock">--:--:--</div>
+          <div class="badge">Live Operations Dashboard</div>
+        </div>
+      </div>
+
+      <section class="section active" id="dashboardSection">
+        <div class="terminal-panel">
+          <div class="prompt">root@payouts:~$</div>
+          <input id="terminalInput" placeholder="Type: create sale, reconcile, balance, help" onkeydown="handleTerminal(event)" />
+        </div>
+
+        <div class="shortcut-row">
+          <button id="seedDemoBtn" class="primary" onclick="seedDemoSale()">Seed Demo Sale</button>
+          <button id="refreshBtn" class="secondary" onclick="refreshAll()">Refresh State</button>
+          <button id="pulseBtn" class="danger" onclick="simulatePulse()">Simulate Pulse</button>
+        </div>
+
+        <div class="status-row">
+          <div class="stat">
+            <span>Advance Logic</span>
+            <strong>10% Rule</strong>
+          </div>
+          <div class="stat">
+            <span>Withdrawal Policy</span>
+            <strong>24h Limit</strong>
+          </div>
+          <div class="stat">
+            <span>Failure Recovery</span>
+            <strong>Auto Credit</strong>
+          </div>
+        </div>
+
+        <div class="grid" style="margin-top: 20px;">
+          <div class="panel">
+            <h3>Create Sale</h3>
+            <p>Register a new affiliate sale and prepare it for payout processing.</p>
+            <label>Sale ID</label>
+            <input id="saleId" value="sale_001" />
+            <label>User ID</label>
+            <input id="userId" value="john_doe" />
+            <label>Brand</label>
+            <input id="brand" value="brand_1" />
+            <label>Status</label>
+            <select id="status">
+              <option value="pending">pending</option>
+              <option value="approved">approved</option>
+              <option value="rejected">rejected</option>
+            </select>
+            <label>Earning</label>
+            <input id="earning" type="number" value="40" />
+            <button id="createSaleBtn" class="primary" onclick="createSale()">Create Sale</button>
+          </div>
+
+          <div class="panel">
+            <h3>Payout Actions</h3>
+            <p>Process advances, reconcile outcomes, inspect balances, and trigger withdrawals.</p>
+            <label>Sale ID</label>
+            <input id="actionSaleId" value="sale_001" />
+            <button id="advanceBtn" class="primary" onclick="processAdvance()">Process Advance Payout</button>
+            <button id="reconcileApprovedBtn" class="secondary" onclick="reconcile('approved')">Reconcile as Approved</button>
+            <button id="reconcileRejectedBtn" class="secondary" onclick="reconcile('rejected')">Reconcile as Rejected</button>
+            <label>User ID</label>
+            <input id="balanceUserId" value="john_doe" />
+            <button id="balanceBtn" class="danger" onclick="viewBalance()">View Balance</button>
+            <label>Withdraw Amount</label>
+            <input id="withdrawAmount" type="number" value="10" />
+            <button id="withdrawBtn" class="secondary" onclick="withdrawFunds()">Withdraw Funds</button>
+          </div>
+        </div>
+
+        <div class="output" id="output">
+          <div class="pill">Live Metrics</div>
+          <h4>Sales performance is updated in real time.</h4>
+          <div>The dashboard below reacts to the current sales state and will change as you create, reconcile, or review payouts.</div>
+          <div class="metric-strip">
+            <div class="metric-card">
+              <span>Total Sales</span>
+              <strong id="totalSales">0</strong>
+            </div>
+            <div class="metric-card">
+              <span>Pending</span>
+              <strong id="pendingValue">0</strong>
+            </div>
+            <div class="metric-card">
+              <span>Approved</span>
+              <strong id="approvedValue">0</strong>
+            </div>
+            <div class="metric-card">
+              <span>Rejected</span>
+              <strong id="rejectedValue">0</strong>
+            </div>
+          </div>
+          <div class="mini-grid">
+            <div class="mini-card">
+              <span>Current Balance</span>
+              <strong id="balanceValue">0</strong>
+            </div>
+            <div class="mini-card">
+              <span>Last Action</span>
+              <strong id="lastAction">Idle</strong>
+            </div>
+          </div>
+          <div class="chart" id="statusChart"></div>
+          <div class="action-hint">Tip: press Ctrl + Enter in the form to create a sale faster.</div>
+        </div>
+
+        <div class="panel" style="margin-top: 20px;">
+          <div class="toolbar">
+            <h3 style="margin: 0;">Recent Activity</h3>
+            <button id="exportBtn" class="primary" style="width: auto; margin: 0;" onclick="exportSnapshot()">Export Snapshot</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Sale ID</th>
+                  <th>User</th>
+                  <th>Brand</th>
+                  <th>Status</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody id="activityTableBody">
+                <tr><td colspan="5">No activity yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="salesSection">
+        <div class="panel">
+          <h3>Sales Overview</h3>
+          <div class="toolbar">
+            <input id="salesFilter" placeholder="Filter by user, brand, or status" oninput="filterSales()" />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>ID</th><th>User</th><th>Brand</th><th>Status</th><th>Earning</th><th>Advance Paid</th></tr>
+              </thead>
+              <tbody id="salesTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="payoutsSection">
+        <div class="panel">
+          <h3>Payouts Overview</h3>
+          <div class="toolbar">
+            <input id="payoutsFilter" placeholder="Filter payouts" oninput="filterPayouts()" />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th></tr>
+              </thead>
+              <tbody id="payoutsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="usersSection">
+        <div class="panel">
+          <h3>Users & Balances</h3>
+          <div class="toolbar">
+            <input id="usersFilter" placeholder="Filter users" oninput="filterUsers()" />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>User</th><th>Withdrawable Balance</th><th>Last Withdrawal</th></tr>
+              </thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="settingsSection">
+        <div class="panel">
+          <h3>System Settings</h3>
+          <p>Advance payout rule, withdrawal frequency, and recovery policy are active as configured for this assignment.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const activityRows = [];
+    let refreshTimer = null;
+
+    function setBusy(buttonId, isBusy, label) {
+      const button = document.getElementById(buttonId);
+      if (!button) return;
+      button.disabled = isBusy;
+      button.textContent = isBusy ? label : button.dataset.originalLabel || label;
+    }
+
+    function setControlLabel(buttonId, label) {
+      const button = document.getElementById(buttonId);
+      if (!button) return;
+      button.dataset.originalLabel = label;
+      button.textContent = label;
+    }
+
+    function updateClock() {
+      const clock = document.getElementById('liveClock');
+      if (clock) clock.textContent = new Date().toLocaleTimeString();
+    }
+
+    function showToast(message, tone = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast show ${tone}`;
+      clearTimeout(showToast.timeout);
+      showToast.timeout = setTimeout(() => toast.className = 'toast', 2200);
+    }
+
+    function startLiveRefresh() {
+      clearInterval(refreshTimer);
+      refreshTimer = setInterval(async () => {
+        await refreshDashboard();
+        if (document.getElementById('salesSection')?.classList.contains('active')) await loadSalesView();
+        if (document.getElementById('payoutsSection')?.classList.contains('active')) await loadPayoutsView();
+        if (document.getElementById('usersSection')?.classList.contains('active')) await loadUsersView();
+        updateClock();
+      }, 8000);
+    }
+
+    function updateLastAction(message) {
+      const lastAction = document.getElementById('lastAction');
+      if (lastAction) lastAction.textContent = message;
+    }
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', function (event) {
+        event.preventDefault();
+        document.querySelectorAll('.nav-item').forEach(link => link.classList.remove('active'));
+        this.classList.add('active');
+        const target = this.textContent.trim().toLowerCase();
+        document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+        if (target === 'sales') {
+          document.getElementById('salesSection').classList.add('active');
+          loadSalesView();
+        } else if (target === 'payouts') {
+          document.getElementById('payoutsSection').classList.add('active');
+          loadPayoutsView();
+        } else if (target === 'users') {
+          document.getElementById('usersSection').classList.add('active');
+          loadUsersView();
+        } else if (target === 'settings') {
+          document.getElementById('settingsSection').classList.add('active');
+        } else {
+          document.getElementById('dashboardSection').classList.add('active');
+        }
+      });
+    });
+
+    async function refreshDashboard() {
+      const res = await fetch('/dashboard');
+      const summary = await res.json();
+      const totalSales = document.getElementById('totalSales');
+      const balanceValue = document.getElementById('balanceValue');
+      const pendingValue = document.getElementById('pendingValue');
+      const approvedValue = document.getElementById('approvedValue');
+      const rejectedValue = document.getElementById('rejectedValue');
+      if (totalSales) totalSales.textContent = summary.total_sales || 0;
+      if (pendingValue) pendingValue.textContent = summary.pending_sales || 0;
+      if (approvedValue) approvedValue.textContent = summary.approved_sales || 0;
+      if (rejectedValue) rejectedValue.textContent = summary.rejected_sales || 0;
+      if (balanceValue) balanceValue.textContent = summary.total_sales || 0;
+      renderChart(summary);
+    }
+
+    function renderChart(summary) {
+      const chart = document.getElementById('statusChart');
+      const statuses = [
+        { label: 'Pending', value: summary.pending_sales || 0 },
+        { label: 'Approved', value: summary.approved_sales || 0 },
+        { label: 'Rejected', value: summary.rejected_sales || 0 }
+      ];
+      const max = Math.max(1, ...statuses.map(item => item.value));
+      chart.innerHTML = statuses.map(item => `
+        <div class="bar">
+          <span style="height: ${(item.value / max) * 80 + 10}%"></span>
+          <strong>${item.label}: ${item.value}</strong>
+        </div>
+      `).join('');
+    }
+
+    async function createSale() {
+      setBusy('createSaleBtn', true, 'Creating…');
+      const payload = {
+        id: document.getElementById('saleId').value,
+        user_id: document.getElementById('userId').value,
+        brand: document.getElementById('brand').value,
+        status: document.getElementById('status').value,
+        earning: Number(document.getElementById('earning').value)
+      };
+      const res = await fetch('/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      activityRows.unshift({ id: data.id, user: payload.user_id, brand: payload.brand, status: payload.status, amount: payload.earning });
+      updateActivityTable();
+      await refreshDashboard();
+      updateLastAction(`Created ${data.id}`);
+      showToast(`Sale ${data.id} created`, 'success');
+      showResult('Sale created successfully', data);
+      setBusy('createSaleBtn', false, 'Create Sale');
+    }
+
+    async function processAdvance() {
+      setBusy('advanceBtn', true, 'Processing…');
+      const saleId = document.getElementById('actionSaleId').value;
+      const res = await fetch(`/sales/${saleId}/advance`, { method: 'POST' });
+      const data = await res.json();
+      await refreshDashboard();
+      updateLastAction(`Advance for ${saleId}`);
+      showToast('Advance payout processed', 'success');
+      showResult('Advance payout processed', data);
+      setBusy('advanceBtn', false, 'Process Advance Payout');
+    }
+
+    async function reconcile(status) {
+      const buttonId = status === 'approved' ? 'reconcileApprovedBtn' : 'reconcileRejectedBtn';
+      setBusy(buttonId, true, 'Reconciling…');
+      const saleId = document.getElementById('actionSaleId').value;
+      const res = await fetch(`/sales/${saleId}/reconcile?new_status=${status}`, { method: 'POST' });
+      const data = await res.json();
+      await refreshDashboard();
+      updateLastAction(`Reconciled ${saleId}`);
+      showToast(`Reconciled as ${status}`, 'success');
+      showResult(`Sale reconciled as ${status}`, data);
+      setBusy(buttonId, false, status === 'approved' ? 'Reconcile as Approved' : 'Reconcile as Rejected');
+    }
+
+    async function viewBalance() {
+      setBusy('balanceBtn', true, 'Loading…');
+      const userId = document.getElementById('balanceUserId').value;
+      const res = await fetch(`/balances/${userId}`);
+      const data = await res.json();
+      const balanceValue = document.getElementById('balanceValue');
+      if (balanceValue) balanceValue.textContent = data.withdrawable_balance || 0;
+      await refreshDashboard();
+      updateLastAction(`Balance for ${userId}`);
+      showToast(`Balance loaded for ${userId}`, 'success');
+      showResult('Balance overview loaded', data);
+      setBusy('balanceBtn', false, 'View Balance');
+    }
+
+    async function withdrawFunds() {
+      setBusy('withdrawBtn', true, 'Withdrawing…');
+      const userId = document.getElementById('balanceUserId').value;
+      const amount = Number(document.getElementById('withdrawAmount').value);
+      const res = await fetch(`/withdrawals/${userId}?amount=${amount}`, { method: 'POST' });
+      const data = await res.json();
+      await refreshDashboard();
+      updateLastAction(`Withdraw ${amount}`);
+      showToast(`Withdrawal of ${amount} submitted`, 'success');
+      showResult('Withdrawal processed', data);
+      setBusy('withdrawBtn', false, 'Withdraw Funds');
+    }
+
+    async function exportSnapshot() {
+      setBusy('exportBtn', true, 'Exporting…');
+      const res = await fetch('/export');
+      const snapshot = await res.json();
+      showToast('Snapshot exported', 'success');
+      showResult('Exported dashboard snapshot', snapshot);
+      setBusy('exportBtn', false, 'Export Snapshot');
+    }
+
+    function updateActivityTable() {
+      const tbody = document.getElementById('activityTableBody');
+      if (activityRows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">No activity yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = activityRows.slice(0, 6).map(row => `
+        <tr>
+          <td>${row.id}</td>
+          <td>${row.user}</td>
+          <td>${row.brand}</td>
+          <td><span class="chip ${row.status === 'approved' ? 'success' : row.status === 'rejected' ? 'warn' : ''}">${row.status}</span></td>
+          <td>${row.amount}</td>
+        </tr>
+      `).join('');
+    }
+
+    let salesRows = [];
+    let payoutsRows = [];
+    let usersRows = [];
+
+    async function loadSalesView() {
+      const res = await fetch('/sales-view');
+      salesRows = await res.json();
+      renderSalesRows();
+    }
+
+    function renderSalesRows() {
+      const filter = document.getElementById('salesFilter')?.value?.toLowerCase() || '';
+      const tbody = document.getElementById('salesTableBody');
+      const visible = salesRows.filter(row => JSON.stringify(row).toLowerCase().includes(filter));
+      tbody.innerHTML = visible.map(row => `
+        <tr>
+          <td>${row.id}</td>
+          <td>${row.user_id}</td>
+          <td>${row.brand}</td>
+          <td>${row.status}</td>
+          <td>${row.earning}</td>
+          <td>${row.advance_paid}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function loadPayoutsView() {
+      const res = await fetch('/payouts-view');
+      payoutsRows = await res.json();
+      renderPayoutRows();
+    }
+
+    function renderPayoutRows() {
+      const filter = document.getElementById('payoutsFilter')?.value?.toLowerCase() || '';
+      const tbody = document.getElementById('payoutsTableBody');
+      const visible = payoutsRows.filter(row => JSON.stringify(row).toLowerCase().includes(filter));
+      tbody.innerHTML = visible.map(row => `
+        <tr>
+          <td>${row.id}</td>
+          <td>${row.user_id}</td>
+          <td>${row.amount}</td>
+          <td>${row.status}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function loadUsersView() {
+      const res = await fetch('/users-view');
+      usersRows = await res.json();
+      renderUserRows();
+    }
+
+    function renderUserRows() {
+      const filter = document.getElementById('usersFilter')?.value?.toLowerCase() || '';
+      const tbody = document.getElementById('usersTableBody');
+      const visible = usersRows.filter(row => JSON.stringify(row).toLowerCase().includes(filter));
+      tbody.innerHTML = visible.map(row => `
+        <tr>
+          <td>${row.user_id}</td>
+          <td>${row.withdrawable_balance}</td>
+          <td>${row.last_withdrawal_at || '—'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function filterSales() { renderSalesRows(); }
+    function filterPayouts() { renderPayoutRows(); }
+    function filterUsers() { renderUserRows(); }
+
+    async function refreshAll() {
+      setBusy('refreshBtn', true, 'Refreshing…');
+      await refreshDashboard();
+      await loadSalesView();
+      await loadPayoutsView();
+      await loadUsersView();
+      updateLastAction('Refreshed state');
+      showToast('Dashboard refreshed', 'success');
+      setBusy('refreshBtn', false, 'Refresh State');
+    }
+
+    async function seedDemoSale() {
+      setBusy('seedDemoBtn', true, 'Seeding…');
+      const payload = {
+        id: `demo_${Date.now()}`,
+        user_id: `user_${Math.floor(Math.random() * 10) + 1}`,
+        brand: ['brand_1', 'brand_2', 'brand_3'][Math.floor(Math.random() * 3)],
+        status: 'pending',
+        earning: 25 + Math.floor(Math.random() * 50)
+      };
+      const res = await fetch('/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      activityRows.unshift({ id: data.id, user: payload.user_id, brand: payload.brand, status: payload.status, amount: payload.earning });
+      updateActivityTable();
+      await refreshAll();
+      updateLastAction('Seeded demo sale');
+      showToast('Demo sale seeded', 'success');
+      setBusy('seedDemoBtn', false, 'Seed Demo Sale');
+    }
+
+    async function simulatePulse() {
+      setBusy('pulseBtn', true, 'Pulsing…');
+      await refreshDashboard();
+      if (document.getElementById('salesSection')?.classList.contains('active')) await loadSalesView();
+      document.getElementById('connectionStatus').innerHTML = '<span class="dot"></span>Pulse sent';
+      setTimeout(() => {
+        const status = document.getElementById('connectionStatus');
+        if (status) status.innerHTML = '<span class="dot"></span>Live sync';
+      }, 1200);
+      updateLastAction('Simulated pulse');
+      showToast('Pulse simulated', 'success');
+      setBusy('pulseBtn', false, 'Simulate Pulse');
+    }
+
+    function handleTerminal(event) {
+      if (event.key !== 'Enter') return;
+      const command = document.getElementById('terminalInput').value.trim().toLowerCase();
+      if (command === 'help') {
+        showResult('Available commands', { commands: ['create sale', 'reconcile', 'balance', 'help'] });
+      } else if (command === 'create sale') {
+        document.getElementById('saleId').value = `sale_${Date.now()}`;
+        document.getElementById('userId').value = 'john_doe';
+        document.getElementById('brand').value = 'brand_1';
+        document.getElementById('status').value = 'pending';
+        document.getElementById('earning').value = '40';
+        showResult('Terminal command', { message: 'Prepared a new sale form for creation.' });
+      } else if (command === 'reconcile') {
+        document.getElementById('actionSaleId').value = document.getElementById('saleId').value;
+        showResult('Terminal command', { message: 'Reconcile action is ready. Use the button on the dashboard.' });
+      } else if (command === 'balance') {
+        viewBalance();
+      } else {
+        showResult('Terminal command', { message: 'Unknown command. Try help.' });
+      }
+      document.getElementById('terminalInput').value = '';
+    }
+
+    function showResult(title, data) {
+      const output = document.getElementById('output');
+      output.innerHTML = `
+        <div class="pill">Action Complete</div>
+        <h4>${title}</h4>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+        <div class="mini-grid">
+          <div class="mini-card">
+            <span>Total Sales</span>
+            <strong id="totalSalesInline">${document.getElementById('totalSales').textContent}</strong>
+          </div>
+          <div class="mini-card">
+            <span>Current Balance</span>
+            <strong id="balanceValueInline">${document.getElementById('balanceValue').textContent}</strong>
+          </div>
+        </div>
+        <div class="chart" id="statusChartInline"></div>
+      `;
+      document.getElementById('statusChartInline').innerHTML = document.getElementById('statusChart').innerHTML;
+    }
+
+    function bindShortcuts() {
+      document.addEventListener('keydown', (event) => {
+        if (event.ctrlKey && event.key === 'Enter') {
+          event.preventDefault();
+          createSale();
+        }
+      });
+    }
+
+    ['createSaleBtn','advanceBtn','reconcileApprovedBtn','reconcileRejectedBtn','balanceBtn','withdrawBtn','exportBtn','seedDemoBtn','refreshBtn','pulseBtn'].forEach(id => {
+      const button = document.getElementById(id);
+      if (button) button.dataset.originalLabel = button.textContent;
+    });
+
+    updateClock();
+    bindShortcuts();
+    startLiveRefresh();
+    refreshDashboard();
+  </script>
+</body>
+</html>
