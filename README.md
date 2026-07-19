@@ -165,7 +165,7 @@ Suggested screenshot order:
 2. Sales management view
 3. Payouts and balances view
 4. Export snapshot output
-Embedded screenshots (captured from localhost):
+Embedded screenshots :
 
 Dashboard home view:
 
@@ -175,10 +175,12 @@ Dashboard home view:
 
 
 Sales management view:
-![Create and payout](screenshots/dashboard-2.svg)
+<img width="947" height="441" alt="image" src="https://github.com/user-attachments/assets/c2025be2-8ca9-4aa6-869b-fd1970d037b8" />
+
 
 Export snapshot output:
-![Export snapshot](screenshots/dashboard-3.svg)
+<img width="938" height="387" alt="image" src="https://github.com/user-attachments/assets/3ff9ef1f-ff79-4337-b133-96b64d4a8f4d" />
+
 
  Notes
 - The current implementation uses in-memory storage, so data resets when the server restarts.
